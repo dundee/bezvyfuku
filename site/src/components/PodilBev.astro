@@ -1,0 +1,65 @@
+<div
+	class="graf"
+	id="graf-podil-bev"
+	role="img"
+	aria-label="Graf podílu elektromobilů na registracích nových osobních aut po měsících od roku 2015"
+>
+</div>
+
+<script>
+	import { celkem, data } from '../lib/data';
+	import { nazevMesice, podil } from '../lib/format';
+	import { BARVY, osaMesicu, posuvnik, vytvorGraf, zaklad } from '../lib/grafy';
+
+	const start = data.mesice.indexOf('2015-01');
+	const mesice = data.mesice.slice(start);
+	const bev = data.pohon.nove[data.skupinaBev];
+	const vse = data.mesice.map((_, i) => celkem(data.pohon.nove, i));
+
+	function podilZa(od: number, doI: number): number | null {
+		let b = 0;
+		let c = 0;
+		for (let i = od; i <= doI; i++) {
+			b += bev[i];
+			c += vse[i];
+		}
+		return c ? b / c : null;
+	}
+
+	vytvorGraf(document.getElementById('graf-podil-bev')!).setOption({
+		...zaklad('podil-elektromobilu'),
+		legend: { top: 4, left: 0 },
+		tooltip: {
+			trigger: 'axis',
+			formatter: (params: any[]) =>
+				`<b>${nazevMesice(params[0].axisValue)}</b><br>` +
+				params
+					.map((p) => `${p.marker} ${p.seriesName}: <b>${p.value == null ? '–' : podil(p.value)}</b>`)
+					.join('<br>'),
+		},
+		xAxis: osaMesicu(mesice),
+		yAxis: {
+			type: 'value',
+			axisLabel: { formatter: (v: number) => `${Math.round(v * 100)} %` },
+		},
+		dataZoom: posuvnik(mesice, 0),
+		series: [
+			{
+				name: 'Měsíc',
+				type: 'line',
+				showSymbol: false,
+				color: '#86efac',
+				lineStyle: { width: 1.5 },
+				data: mesice.map((_, j) => podilZa(start + j, start + j)),
+			},
+			{
+				name: 'Posledních 12 měsíců',
+				type: 'line',
+				showSymbol: false,
+				color: BARVY[data.skupinaBev],
+				lineStyle: { width: 3 },
+				data: mesice.map((_, j) => podilZa(start + j - 11, start + j)),
+			},
+		],
+	});
+</script>

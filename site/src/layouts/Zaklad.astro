@@ -1,0 +1,300 @@
+---
+import { data } from '../lib/data';
+import { datum } from '../lib/format';
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const {
+	title,
+	description = 'Kolik elektromobilů v Česku přibývá. Registrace nových a dovezených osobních aut podle pohonu a značek, měsíc po měsíci, z otevřených dat Registru silničních vozidel.',
+} = Astro.props;
+const plnyTitulek = title ? `${title} · Bez výfuku` : 'Bez výfuku · elektromobily v registracích aut';
+const cesta = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="cs">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{plnyTitulek}</title>
+		<meta name="description" content={description} />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="canonical" href={new URL(cesta, Astro.site)} />
+		<meta property="og:title" content={plnyTitulek} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:locale" content="cs_CZ" />
+		<meta name="generator" content={Astro.generator} />
+	</head>
+	<body>
+		<header class="hlavicka">
+			<div class="obal">
+				<a class="logo" href="/">Bez výfuku</a>
+				<nav>
+					<a href="/" aria-current={cesta === '/' ? 'page' : undefined}>Přehled</a>
+					<a href="/metodika/" aria-current={cesta.startsWith('/metodika') ? 'page' : undefined}>
+						Metodika
+					</a>
+				</nav>
+			</div>
+		</header>
+		<main class="obal">
+			<slot />
+		</main>
+		<footer class="paticka">
+			<div class="obal">
+				Data: <a href="https://download.dataovozidlech.cz/">Registr silničních vozidel</a>,
+				otevřená data Ministerstva dopravy ČR, stav k&nbsp;{datum(data.snapshot)}.
+				· <a href="/metodika/">Jak počítáme</a>
+			</div>
+		</footer>
+	</body>
+</html>
+
+<style is:global>
+	:root {
+		--text: #18181b;
+		--sede: #52525b;
+		--svetle: #a1a1aa;
+		--okraj: #e4e4e7;
+		--bev: #15803d;
+		--bev-pozadi: #f0fdf4;
+		--bev-okraj: #bbf7d0;
+		font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+		line-height: 1.5;
+		color: var(--text);
+		background: #fff;
+	}
+	* {
+		box-sizing: border-box;
+	}
+	body {
+		margin: 0;
+	}
+	a {
+		color: var(--bev);
+	}
+	.obal {
+		max-width: 70rem;
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+	.hlavicka {
+		border-bottom: 1px solid var(--okraj);
+	}
+	.hlavicka .obal {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		min-height: 3.5rem;
+	}
+	.logo {
+		font-weight: 800;
+		font-size: 1.25rem;
+		color: var(--text);
+		text-decoration: none;
+	}
+	.logo::before {
+		content: '';
+		display: inline-block;
+		width: 0.65em;
+		height: 0.65em;
+		margin-right: 0.4em;
+		border-radius: 50%;
+		background: var(--bev);
+	}
+	nav a {
+		margin-left: 1.25rem;
+		color: var(--sede);
+		text-decoration: none;
+	}
+	nav a[aria-current='page'] {
+		color: var(--text);
+		font-weight: 600;
+	}
+	main {
+		padding-top: 1.5rem;
+		padding-bottom: 3rem;
+	}
+	section + section {
+		margin-top: 3rem;
+	}
+	h1 {
+		font-size: 2.1rem;
+		line-height: 1.2;
+		margin: 0 0 0.5rem;
+	}
+	h2 {
+		font-size: 1.35rem;
+		line-height: 1.3;
+		margin: 0 0 0.5rem;
+	}
+	.perex {
+		font-size: 1.15rem;
+		color: var(--sede);
+		max-width: 46rem;
+		margin: 0;
+	}
+	.popis {
+		color: var(--sede);
+		max-width: 46rem;
+		margin: 0 0 0.75rem;
+	}
+	.karty {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+		gap: 0.75rem;
+	}
+	.karta {
+		border: 1px solid var(--okraj);
+		border-radius: 0.75rem;
+		padding: 0.875rem 1rem;
+	}
+	.karta.bev {
+		background: var(--bev-pozadi);
+		border-color: var(--bev-okraj);
+	}
+	.karta .nazev,
+	.karta .pozn {
+		color: var(--sede);
+		font-size: 0.9rem;
+	}
+	.karta .hodnota {
+		font-size: 1.9rem;
+		font-weight: 700;
+		line-height: 1.25;
+		font-variant-numeric: tabular-nums;
+	}
+	.graf {
+		width: 100%;
+		height: 27rem;
+	}
+	.ovladani {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem 1.25rem;
+		align-items: center;
+		margin: 0.75rem 0 1rem;
+	}
+	.prepinac {
+		display: inline-flex;
+		border: 1px solid var(--okraj);
+		border-radius: 0.5rem;
+		overflow: hidden;
+	}
+	.prepinac button {
+		font: inherit;
+		border: 0;
+		background: #fff;
+		color: var(--sede);
+		padding: 0.35rem 0.85rem;
+		cursor: pointer;
+	}
+	.prepinac button + button {
+		border-left: 1px solid var(--okraj);
+	}
+	.prepinac button[aria-pressed='true'] {
+		background: var(--text);
+		color: #fff;
+	}
+	label {
+		display: inline-flex;
+		gap: 0.5rem;
+		align-items: center;
+		color: var(--sede);
+	}
+	select {
+		font: inherit;
+		color: var(--text);
+		padding: 0.3rem 0.5rem;
+		border: 1px solid var(--okraj);
+		border-radius: 0.5rem;
+		background: #fff;
+	}
+	.tabulka-obal {
+		overflow-x: auto;
+	}
+	.tabulka {
+		border-collapse: collapse;
+		width: 100%;
+		font-variant-numeric: tabular-nums;
+	}
+	.tabulka caption {
+		text-align: left;
+		color: var(--sede);
+		padding-bottom: 0.5rem;
+	}
+	.tabulka th,
+	.tabulka td {
+		padding: 0.4rem 0.6rem;
+		border-bottom: 1px solid var(--okraj);
+		text-align: left;
+		white-space: nowrap;
+	}
+	.tabulka th {
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--sede);
+	}
+	.tabulka .cislo {
+		text-align: right;
+	}
+	.tabulka .poradi {
+		width: 2.5rem;
+		color: var(--svetle);
+	}
+	.tabulka tfoot td {
+		font-weight: 700;
+		border-bottom: 0;
+	}
+	/* 21 = ZKRACENE + 1, viz lib/znacky.ts */
+	.tabulka.zkracena:not(.vse) tbody tr:nth-child(n + 21) {
+		display: none;
+	}
+	.vice {
+		font: inherit;
+		color: var(--bev);
+		background: none;
+		border: 0;
+		padding: 0.5rem 0;
+		cursor: pointer;
+		text-decoration: underline;
+	}
+	.paticka {
+		border-top: 1px solid var(--okraj);
+		color: var(--sede);
+		font-size: 0.9rem;
+		padding: 1.5rem 0 2rem;
+	}
+	@media (max-width: 40rem) {
+		h1 {
+			font-size: 1.7rem;
+		}
+		.graf {
+			height: 22rem;
+		}
+		.karta .hodnota {
+			font-size: 1.6rem;
+		}
+		.tabulka {
+			font-size: 0.9rem;
+		}
+		.tabulka th,
+		.tabulka td {
+			padding: 0.4rem 0.3rem;
+		}
+		.tabulka th {
+			white-space: normal;
+		}
+		.tabulka .poradi {
+			width: 1.75rem;
+		}
+		.tabulka .podil {
+			display: none;
+		}
+	}
+</style>

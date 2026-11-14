@@ -1,0 +1,95 @@
+---
+import Zaklad from '../layouts/Zaklad.astro';
+import { data } from '../lib/data';
+import { datum } from '../lib/format';
+
+const aliasy = Object.entries(data.aliasy).sort(([, a], [, b]) => a.localeCompare(b, 'cs'));
+---
+
+<Zaklad title="Metodika" description="Odkud pocházejí čísla na webu Bez výfuku a jak je počítáme.">
+	<section class="text">
+		<h1>Metodika</h1>
+
+		<h2>Zdroj dat</h2>
+		<p>
+			Všechna čísla pocházejí z datové sady <a href="https://download.dataovozidlech.cz/"
+				>Vozidla – technické údaje</a
+			> z Registru silničních vozidel. Ministerstvo dopravy ji každý měsíc zveřejňuje jako úplný
+			výpis registru v rámci otevřených dat. Web vždy počítá z posledního výpisu, teď ze stavu
+			k&nbsp;{datum(data.snapshot)}.
+		</p>
+
+		<h2>Která auta počítáme</h2>
+		<ul>
+			<li>
+				<b>Osobní automobily</b> – vozidla, která mají v registru druh „OSOBNÍ AUTOMOBIL“. To zahrnuje
+				kategorie M1 i M1G (terénní), ale ne vozidla zvláštního určení, jako jsou sanitky nebo
+				pohřební vozy.
+			</li>
+			<li><b>Měsíc registrace</b> je měsíc první registrace v Česku.</li>
+			<li>
+				<b>Nové auto</b> má datum první registrace shodné s datem první registrace v Česku. Když
+				bylo auto poprvé registrováno dřív, jezdilo předtím v zahraničí a počítáme ho
+				jako <b>dovezenou ojetinu</b>.
+			</li>
+		</ul>
+
+		<h2>Pohon</h2>
+		<p>
+			<b>Elektromobil (BEV)</b> je auto, které má v registru jako palivo uvedenou jen elektřinu (zápis
+			„EL“). Sloupec „Plně elektrické vozidlo“ nepoužíváme, protože je neúplný: za srpen 2026 v něm
+			je 1 236 aut místo 1 499.
+		</p>
+		<p>
+			Zápis paliva se v registru v čase měnil (dřív třeba „BA 95 B“, dnes „BA“), proto ostatní auta
+			řadíme do skupin podle složek zápisu:
+		</p>
+		<ul>
+			<li>
+				<b>Hybrid</b> – kombinace elektřiny s benzínem nebo naftou. Zápis paliva nerozlišuje plug-in
+				hybridy od klasických.
+			</li>
+			<li><b>Benzín</b> a <b>Nafta</b> – včetně směsí s biosložkou a E85.</li>
+			<li><b>LPG</b> a <b>CNG</b> – auta na plyn, většinou v kombinaci s benzínem.</li>
+			<li>
+				<b>Ostatní</b> – vodík, nevyplněné a nesrozumitelné zápisy. Od roku 2010 je to méně než 1 % aut
+				ročně.
+			</li>
+		</ul>
+
+		<h2>Značky</h2>
+		<p>
+			Značka je „Tovární značka“ z registru. Různé zápisy téže značky sjednocujeme, aby
+			meziroční srovnání sedělo:
+		</p>
+		<div class="tabulka-obal">
+			<table class="tabulka aliasy">
+				<thead>
+					<tr><th>Zápis v registru</th><th>Značka na webu</th></tr>
+				</thead>
+				<tbody>
+					{aliasy.map(([zapis, znacka]) => <tr><td>{zapis}</td><td>{znacka}</td></tr>)}
+				</tbody>
+			</table>
+		</div>
+
+		<h2>Zpětné změny</h2>
+		<p>
+			Registr se průběžně opravuje, a tak se čísla za starší měsíce mohou mezi výpisy mírně lišit.
+			Od statistik, které ministerstvo zveřejňuje jinde, se mohou lišit i proto, že vznikají
+			z výpisu k jinému dni.
+		</p>
+	</section>
+</Zaklad>
+
+<style>
+	.text {
+		max-width: 46rem;
+	}
+	.text h2 {
+		margin-top: 2rem;
+	}
+	.aliasy {
+		width: auto;
+	}
+</style>

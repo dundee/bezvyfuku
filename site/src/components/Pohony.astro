@@ -1,0 +1,90 @@
+<div class="ovladani" id="pohony-volby">
+	<div class="prepinac" role="group" aria-label="Auta">
+		<button type="button" data-typ="nove" aria-pressed="true">Nová</button>
+		<button type="button" data-typ="ojete" aria-pressed="false">Dovezené ojetiny</button>
+	</div>
+	<div class="prepinac" role="group" aria-label="Zobrazení">
+		<button type="button" data-jednotky="pocty" aria-pressed="true">Počty</button>
+		<button type="button" data-jednotky="podily" aria-pressed="false">Podíly</button>
+	</div>
+</div>
+<div
+	class="graf"
+	id="graf-pohony"
+	role="img"
+	aria-label="Graf měsíčních registrací osobních aut podle pohonu"
+>
+</div>
+
+<script>
+	import { celkem, data, type Typ } from '../lib/data';
+	import { cislo, nazevMesice, podil } from '../lib/format';
+	import { BARVY, osaMesicu, posuvnik, vytvorGraf, zaklad } from '../lib/grafy';
+
+	type Jednotky = 'pocty' | 'podily';
+	const stav: { typ: Typ; jednotky: Jednotky } = { typ: 'nove', jednotky: 'pocty' };
+	const skupiny = Object.keys(data.pohon.nove);
+	const tlacitka = document.querySelectorAll<HTMLButtonElement>('#pohony-volby button');
+	// Na uzkem displeji se legenda zalomi na dva radky, graf musi zacit niz.
+	const misto = (sirka: number) => ({ grid: { top: sirka < 640 ? 84 : 56 } });
+	const el = document.getElementById('graf-pohony')!;
+	const graf = vytvorGraf(el, misto);
+
+	function serie() {
+		const rady = data.pohon[stav.typ];
+		const vse = data.mesice.map((_, i) => celkem(rady, i));
+		return skupiny.map((nazev) => ({
+			name: nazev,
+			type: 'bar',
+			stack: 'pohon',
+			color: BARVY[nazev],
+			barCategoryGap: '15%',
+			data: rady[nazev].map((n, i) =>
+				stav.jednotky === 'podily' ? (vse[i] ? n / vse[i] : 0) : n,
+			),
+		}));
+	}
+
+	function osaY() {
+		return stav.jednotky === 'podily'
+			? { type: 'value', max: 1, axisLabel: { formatter: (v: number) => `${Math.round(v * 100)} %` } }
+			: { type: 'value', max: null, axisLabel: { formatter: (v: number) => cislo(v) } };
+	}
+
+	graf.setOption({
+		...zaklad('registrace-podle-pohonu'),
+		legend: { top: 4, left: 0, right: 40, itemWidth: 14, itemHeight: 10 },
+		tooltip: {
+			trigger: 'axis',
+			axisPointer: { type: 'shadow' },
+			formatter: (params: any[]) => {
+				const i = params[0].dataIndex;
+				const rady = data.pohon[stav.typ];
+				const vse = celkem(rady, i);
+				const radky = [...params].reverse().map((p) => {
+					const n = rady[p.seriesName][i];
+					return `${p.marker} ${p.seriesName}: <b>${cislo(n)}</b> (${podil(vse ? n / vse : 0)})`;
+				});
+				return `<b>${nazevMesice(data.mesice[i])}</b><br>${radky.join('<br>')}<br>Celkem: <b>${cislo(vse)}</b>`;
+			},
+		},
+		xAxis: osaMesicu(data.mesice),
+		yAxis: osaY(),
+		dataZoom: posuvnik(data.mesice, data.mesice.length - 36),
+		series: serie(),
+	});
+	graf.setOption(misto(el.clientWidth));
+
+	for (const tlacitko of tlacitka) {
+		tlacitko.addEventListener('click', () => {
+			const { typ, jednotky } = tlacitko.dataset;
+			if (typ) stav.typ = typ as Typ;
+			if (jednotky) stav.jednotky = jednotky as Jednotky;
+			for (const b of tlacitka) {
+				const zapnuto = b.dataset.typ === stav.typ || b.dataset.jednotky === stav.jednotky;
+				b.setAttribute('aria-pressed', String(zapnuto));
+			}
+			graf.setOption({ yAxis: osaY(), series: serie() });
+		});
+	}
+</script>

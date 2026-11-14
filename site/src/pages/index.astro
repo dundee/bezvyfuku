@@ -1,0 +1,74 @@
+---
+import PodilBev from '../components/PodilBev.astro';
+import Pohony from '../components/Pohony.astro';
+import Znacky from '../components/Znacky.astro';
+import Zaklad from '../layouts/Zaklad.astro';
+import { celkem, data, posledni } from '../lib/data';
+import { cislo, nazevMesice, podil, velkym, zmena } from '../lib/format';
+
+const i = posledni;
+const nove = [celkem(data.pohon.nove, i), celkem(data.pohon.nove, i - 12)];
+const bev = [data.pohon.nove[data.skupinaBev][i], data.pohon.nove[data.skupinaBev][i - 12]];
+const ojete = [celkem(data.pohon.ojete, i), celkem(data.pohon.ojete, i - 12)];
+const bevOjete = [data.pohon.ojete[data.skupinaBev][i], data.pohon.ojete[data.skupinaBev][i - 12]];
+
+const karty = [
+	{ nazev: 'Nová osobní auta', hodnota: cislo(nove[0]), pozn: `meziročně ${zmena(nove[0], nove[1])}` },
+	{ nazev: 'z toho elektromobily', hodnota: cislo(bev[0]), pozn: `meziročně ${zmena(bev[0], bev[1])}`, bev: true },
+	{ nazev: 'Podíl elektromobilů', hodnota: podil(bev[0] / nove[0]), pozn: `před rokem ${podil(bev[1] / nove[1])}`, bev: true },
+	{ nazev: 'Dovezené ojetiny', hodnota: cislo(ojete[0]), pozn: `meziročně ${zmena(ojete[0], ojete[1])}` },
+	{ nazev: 'z toho elektromobily', hodnota: cislo(bevOjete[0]), pozn: `meziročně ${zmena(bevOjete[0], bevOjete[1])}` },
+];
+---
+
+<Zaklad>
+	<section>
+		<h1>Elektromobily v registracích aut</h1>
+		<p class="perex">
+			Kolik nových a dovezených osobních aut se v Česku registruje, s jakým pohonem a kolik
+			z nich jezdí bez výfuku. Každý měsíc z otevřených dat Registru silničních vozidel.
+		</p>
+	</section>
+
+	<section>
+		<h2>{velkym(nazevMesice(data.posledniMesic))}</h2>
+		<div class="karty">
+			{
+				karty.map((k) => (
+					<div class:list={['karta', { bev: k.bev }]}>
+						<div class="nazev">{k.nazev}</div>
+						<div class="hodnota">{k.hodnota}</div>
+						<div class="pozn">{k.pozn}</div>
+					</div>
+				))
+			}
+		</div>
+	</section>
+
+	<section>
+		<h2>Podíl elektromobilů na nových autech</h2>
+		<p class="popis">
+			Bateriové elektromobily (BEV) jako podíl ze všech nově registrovaných osobních aut. Silná
+			čára počítá podíl za posledních 12 měsíců a vyhlazuje výkyvy mezi jednotlivými měsíci.
+		</p>
+		<PodilBev />
+	</section>
+
+	<section>
+		<h2>Registrace podle pohonu</h2>
+		<p class="popis">
+			Měsíční počty registrací osobních aut. Dovezené ojetiny jsou auta, která předtím jezdila
+			v zahraničí. Posuvníkem pod grafem změníte zobrazené období.
+		</p>
+		<Pohony />
+	</section>
+
+	<section>
+		<h2>Elektromobily podle značek</h2>
+		<p class="popis">
+			Registrace elektromobilů podle tovární značky za měsíc, od začátku roku nebo za posledních
+			12 měsíců.
+		</p>
+		<Znacky />
+	</section>
+</Zaklad>

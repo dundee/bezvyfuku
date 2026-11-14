@@ -1,0 +1,141 @@
+---
+import { data, posledni } from '../lib/data';
+import { cislo, nazevMesice, podil, zmena } from '../lib/format';
+import { nazevZnacky, OBDOBI, popisObdobi, tabulka, ZKRACENE } from '../lib/znacky';
+
+const vychozi = tabulka(data.bevZnacky.nove, 'mesic', posledni, data.mesice);
+const mesice = data.mesice
+	.map((m, i) => ({ m, i }))
+	.filter(({ m }) => m >= '2016-01')
+	.reverse();
+---
+
+<form class="ovladani" id="znacky-volby">
+	<label>
+		Auta
+		<select name="typ">
+			<option value="nove">nová</option>
+			<option value="ojete">dovezené ojetiny</option>
+		</select>
+	</label>
+	<label>
+		Období
+		<select name="obdobi">
+			{Object.entries(OBDOBI).map(([hodnota, popis]) => <option value={hodnota}>{popis}</option>)}
+		</select>
+	</label>
+	<label>
+		Končí
+		<select name="mesic">
+			{mesice.map(({ m, i }) => <option value={i}>{nazevMesice(m)}</option>)}
+		</select>
+	</label>
+</form>
+
+<div class="tabulka-obal">
+	<table class="tabulka zkracena" id="znacky-tabulka">
+		<caption>
+			{popisObdobi('mesic', posledni, data.mesice)}, srovnání se stejným obdobím o rok dříve
+		</caption>
+		<thead>
+			<tr>
+				<th class="poradi">#</th>
+				<th>Značka</th>
+				<th class="cislo">Registrace</th>
+				<th class="cislo podil">Podíl</th>
+				<th class="cislo">Před rokem</th>
+				<th class="cislo">Změna</th>
+			</tr>
+		</thead>
+		<tbody>
+			{
+				vychozi.radky.map((r, k) => (
+					<tr>
+						<td class="poradi">{k + 1}</td>
+						<td>{nazevZnacky(r.znacka)}</td>
+						<td class="cislo">{cislo(r.ted)}</td>
+						<td class="cislo podil">{podil(vychozi.ted ? r.ted / vychozi.ted : 0)}</td>
+						<td class="cislo">{cislo(r.loni)}</td>
+						<td class="cislo">{zmena(r.ted, r.loni)}</td>
+					</tr>
+				))
+			}
+		</tbody>
+		<tfoot>
+			<tr>
+				<td></td>
+				<td>Celkem</td>
+				<td class="cislo">{cislo(vychozi.ted)}</td>
+				<td class="podil"></td>
+				<td class="cislo">{cislo(vychozi.loni)}</td>
+				<td class="cislo">{zmena(vychozi.ted, vychozi.loni)}</td>
+			</tr>
+		</tfoot>
+	</table>
+</div>
+<button type="button" class="vice" id="znacky-vice" hidden={vychozi.radky.length <= ZKRACENE}>
+	Zobrazit všech {vychozi.radky.length} značek
+</button>
+
+<script>
+	import { data, type Typ } from '../lib/data';
+	import { cislo, podil, zmena } from '../lib/format';
+	import { nazevZnacky, popisObdobi, tabulka, ZKRACENE, type Obdobi } from '../lib/znacky';
+
+	const form = document.getElementById('znacky-volby') as HTMLFormElement;
+	const table = document.getElementById('znacky-tabulka') as HTMLTableElement;
+	const vice = document.getElementById('znacky-vice') as HTMLButtonElement;
+	const TRIDY = ['poradi', '', 'cislo', 'cislo podil', 'cislo', 'cislo'];
+
+	function radek(hodnoty: string[]): HTMLTableRowElement {
+		const tr = document.createElement('tr');
+		hodnoty.forEach((text, k) => {
+			const td = tr.insertCell();
+			td.textContent = text;
+			if (TRIDY[k]) td.className = TRIDY[k];
+		});
+		return tr;
+	}
+
+	function popisTlacitka() {
+		const n = table.tBodies[0].rows.length;
+		vice.hidden = n <= ZKRACENE;
+		vice.textContent = table.classList.contains('vse')
+			? `Zobrazit jen prvních ${ZKRACENE}`
+			: `Zobrazit všech ${n} značek`;
+	}
+
+	function vykresli() {
+		const volby = new FormData(form);
+		const typ = volby.get('typ') as Typ;
+		const obdobi = volby.get('obdobi') as Obdobi;
+		const i = Number(volby.get('mesic'));
+		const t = tabulka(data.bevZnacky[typ], obdobi, i, data.mesice);
+
+		table.caption!.textContent = `${popisObdobi(obdobi, i, data.mesice)}, srovnání se stejným obdobím o rok dříve`;
+		table.tBodies[0].replaceChildren(
+			...t.radky.map((r, k) =>
+				radek([
+					String(k + 1),
+					nazevZnacky(r.znacka),
+					cislo(r.ted),
+					podil(t.ted ? r.ted / t.ted : 0),
+					cislo(r.loni),
+					zmena(r.ted, r.loni),
+				]),
+			),
+		);
+		table.tFoot!.replaceChildren(
+			radek(['', 'Celkem', cislo(t.ted), '', cislo(t.loni), zmena(t.ted, t.loni)]),
+		);
+		popisTlacitka();
+	}
+
+	form.addEventListener('change', vykresli);
+	vice.addEventListener('click', () => {
+		table.classList.toggle('vse');
+		popisTlacitka();
+	});
+	// Prohlizec muze po navratu na stranku obnovit vyber ve formulari.
+	vykresli();
+</script>

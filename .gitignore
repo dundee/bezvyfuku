@@ -1,0 +1,12 @@
+.DS_Store
+
+# Snapshoty RSV (CSV ~17 GB, Parquet ~2.3 GB) do gitu nepatri
+/data/
+*.csv
+report_*.xlsx
+!/tests/golden/report_*.xlsx
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
