@@ -59,7 +59,8 @@ jobs:
           echo "datum=$datum" >> "$GITHUB_OUTPUT"
           echo "novy=$novy" >> "$GITHUB_OUTPUT"
 
-      - uses: astral-sh/setup-uv@v10
+      # setup-uv nema plovouci tag v10, jen presne verze
+      - uses: astral-sh/setup-uv@v10.3.3
         if: steps.vypis.outputs.novy == 'true'
         with:
           enable-cache: true
