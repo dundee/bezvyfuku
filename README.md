@@ -27,11 +27,12 @@ s novým výpisem.
 
 ## Každý měsíc
 
-Postará se o to `.github/workflows/data.yml`. Od 12. dne v měsíci každé ráno zkontroluje,
-jestli vyšel nový výpis. Když ano, stáhne ho rovnou do DuckDB (server posílá ~3 MB/s,
-trvá to kolem 1,5 hodiny), přepočítá data pro web, vytvoří XLSX report a otevře pull
-request. Cloudflare k němu postaví náhled webu. Po kontrole stačí pull request sloučit
-a web jde ven. XLSX report je v artefaktech běhu.
+Postará se o to `.github/workflows/data.yml`. Od 12. dne v měsíci každé ráno zkontroluje
+přes API portálu, jestli vyšel nový výpis. Když ano, stáhne jeho komprimovanou verzi
+(ZIP ~4,6 GB místo 17 GB CSV, runner GitHubu je v USA a dostane jen ~1 MB/s), rozbalí ji
+rovnou do DuckDB, přepočítá data pro web, vytvoří XLSX report a otevře pull request.
+Cloudflare k němu postaví náhled webu. Po kontrole stačí pull request sloučit a web jde
+ven. XLSX report je v artefaktech běhu. Když stahování selže, zkusí to další ráno znovu.
 
 Ruční spuštění: `gh workflow run data.yml`, s `-f force=true` projde celý běh i bez
 nového výpisu (bez změny dat pull request nevznikne).
