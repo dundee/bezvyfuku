@@ -1,0 +1,126 @@
+# Kazdy mesic: novy vypis RSV -> data pro web a report -> pull request ke kontrole.
+# Cloudflare k pull requestu postavi nahled webu, po slouceni jde web ven.
+name: Data
+
+on:
+  schedule:
+    # Vypis vychazi 12. dne v mesici. Kdyz se zpozdi, chytne ho nektery z dalsich dni.
+    - cron: "0 6 12-25 * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Projit cely beh i bez noveho vypisu (test)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: data
+
+env:
+  URL: https://download.dataovozidlech.cz/vypiszregistru/vypisvozidel
+
+jobs:
+  data:
+    runs-on: ubuntu-latest
+    # Server MD posila kolem 3 MB/s, 17 GB vypis se stahuje zhruba 1,5 hodiny.
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Je venku novy vypis?
+        id: vypis
+        env:
+          FORCE: ${{ inputs.force }}
+        run: |
+          soubor=$(curl -sSfI "$URL" | tr -d '\r' | sed -n 's/^content-disposition:.*filename=//Ip')
+          if [[ ! "$soubor" =~ _([0-9]{4})([0-9]{2})([0-9]{2})\.csv ]]; then
+            echo "::error::Nerozumim jmenu souboru na serveru: '$soubor'"
+            exit 1
+          fi
+          datum="${BASH_REMATCH[1]}-${BASH_REMATCH[2]}-${BASH_REMATCH[3]}"
+          na_webu=$(jq -r .snapshot site/src/data/registrace.json)
+          echo "Vypis na serveru: $datum, na webu: $na_webu"
+
+          novy=false
+          if [[ "$datum" > "$na_webu" ]]; then
+            if git ls-remote --exit-code --heads origin "data/$datum" > /dev/null; then
+              echo "Vetev data/$datum uz existuje, pull request je otevreny."
+            else
+              novy=true
+            fi
+          fi
+          if [[ "$FORCE" == "true" ]]; then
+            novy=true
+          fi
+          echo "datum=$datum" >> "$GITHUB_OUTPUT"
+          echo "novy=$novy" >> "$GITHUB_OUTPUT"
+
+      - uses: astral-sh/setup-uv@v10
+        if: steps.vypis.outputs.novy == 'true'
+        with:
+          enable-cache: true
+
+      - name: Stazeni a prevod na Parquet
+        if: steps.vypis.outputs.novy == 'true'
+        env:
+          DATUM: ${{ steps.vypis.outputs.datum }}
+        run: |
+          uv sync --locked
+          set -o pipefail
+          # Stahuje se rovnou do DuckDB, 17 GB CSV by se na disk runneru nevešlo.
+          # Bez --retry: navazane stahovani by poslalo do roury data podruhe.
+          curl -sSf --speed-limit 10000 --speed-time 300 -D hlavicky.txt "$URL" \
+            | uv run python -m pipeline ingest - --date "$DATUM"
+          if ! grep -qi "filename=.*_${DATUM//-/}\.csv" hlavicky.txt; then
+            echo "::error::Behem stahovani se na serveru zmenil vypis"
+            exit 1
+          fi
+
+      - name: Data pro web a report
+        if: steps.vypis.outputs.novy == 'true'
+        run: |
+          uv run python -m pipeline export
+          uv run python -m pipeline report | tee report.txt
+          uv run pytest -q
+
+      - uses: actions/upload-artifact@v7
+        if: steps.vypis.outputs.novy == 'true'
+        with:
+          name: report-${{ steps.vypis.outputs.datum }}
+          path: report_*.xlsx
+
+      - name: Pull request
+        if: steps.vypis.outputs.novy == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DATUM: ${{ steps.vypis.outputs.datum }}
+          BEH: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if git diff --quiet -- site/src/data/registrace.json; then
+            echo "Data pro web se nezmenila, pull request neni potreba."
+            exit 0
+          fi
+          den=$(date -d "$DATUM" '+%-d. %-m. %Y')
+          vetev="data/$DATUM"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$vetev"
+          git add site/src/data/registrace.json
+          git commit -m "Data z výpisu RSV k $den"
+          git push origin "$vetev"
+          {
+            echo "Nový výpis z Registru silničních vozidel ke dni $den."
+            echo
+            echo "Před sloučením zkontroluj náhled webu (odkaz přidá Cloudflare do komentáře) a výstup reportu:"
+            echo
+            echo '```'
+            cat report.txt
+            echo '```'
+            echo
+            echo "XLSX report je v artefaktech běhu: $BEH"
+          } > telo.md
+          gh pr create --base main --head "$vetev" --title "Data z výpisu RSV k $den" --body-file telo.md

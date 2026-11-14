@@ -18,6 +18,7 @@ from . import rules
 
 ROOT = Path(__file__).resolve().parent.parent
 SNAPSHOT_DIR = ROOT / "data" / "snapshots"
+TMP_DIR = ROOT / "data" / "tmp"
 
 # Znaky, ktere odstrani Python str.strip(). Puvodni skript cistil znacku
 # pres strip(), SQL trim() proto musi odstranovat presne totez.
@@ -34,6 +35,11 @@ def sql_strip(expr):
 
 def ident(name):
     return '"%s"' % name.replace('"', '""')
+
+
+def duckdb_connect():
+    # Kdyz DuckDB dojde pamet, odklada na disk, jinak do .tmp v aktualnim adresari.
+    return duckdb.connect(config={"temp_directory": str(TMP_DIR)})
 
 
 # --------------------------------------------------------------------------
@@ -55,27 +61,42 @@ def read_csv_sql(csv_path):
     )
 
 
-def ingest(csv_path):
-    """Prevede CSV snapshot na data/snapshots/RRRR-MM-DD.parquet."""
-    csv_path = Path(csv_path)
-    if not csv_path.exists():
-        raise SystemExit("Soubor neexistuje: %s" % csv_path)
-    out = SNAPSHOT_DIR / ("%s.parquet" % date_from_name(csv_path))
+def ingest(source, snapshot_date=None):
+    """Prevede CSV snapshot na data/snapshots/RRRR-MM-DD.parquet.
+
+    source je cesta k CSV, nebo '-' pro cteni ze stdin. Pak jde vypis
+    stahovat rovnou do DuckDB bez 17 GB na disku, datum je ale treba zadat.
+    """
+    if source == "-":
+        if not snapshot_date:
+            raise SystemExit("Pri cteni ze stdin zadej datum snapshotu: --date RRRR-MM-DD")
+        csv_path = "/dev/stdin"
+        print("Soubor : stdin")
+    else:
+        csv_path = Path(source)
+        if not csv_path.exists():
+            raise SystemExit("Soubor neexistuje: %s" % csv_path)
+        snapshot_date = snapshot_date or date_from_name(csv_path)
+        print("Soubor : %s (%.1f GB)" % (csv_path, csv_path.stat().st_size / 1024 ** 3))
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", snapshot_date):
+        raise SystemExit("Datum snapshotu musi byt ve tvaru RRRR-MM-DD, dostal jsem %r"
+                         % snapshot_date)
+    out = SNAPSHOT_DIR / ("%s.parquet" % snapshot_date)
     tmp = out.with_name(out.name + ".tmp")
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
-    con = duckdb.connect()
-    columns = [r[0] for r in con.execute(
-        "DESCRIBE SELECT * FROM %s" % read_csv_sql(csv_path)).fetchall()]
-    missing = [c for c in rules.REQUIRED_COLUMNS if c not in columns]
-    if missing:
-        raise SystemExit("V hlavicce chybi sloupce: %s" % ", ".join(missing))
-
-    print("Soubor : %s (%.1f GB)" % (csv_path, csv_path.stat().st_size / 1024 ** 3))
+    # Stdin jde precist jen jednou, hlavicka se proto kontroluje az na Parquetu.
+    con = duckdb_connect()
     t0 = time.time()
     con.execute("SET preserve_insertion_order = false")
     con.execute("COPY (SELECT * FROM %s) TO %s (FORMAT parquet, COMPRESSION zstd)"
                 % (read_csv_sql(csv_path), sql_str(tmp)))
+    columns = [r[0] for r in con.execute(
+        "DESCRIBE SELECT * FROM read_parquet(%s)" % sql_str(tmp)).fetchall()]
+    missing = [c for c in rules.REQUIRED_COLUMNS if c not in columns]
+    if missing:
+        tmp.unlink()
+        raise SystemExit("V hlavicce chybi sloupce: %s" % ", ".join(missing))
     rejects = con.execute("SELECT count(*) FROM reject_errors").fetchone()[0]
     rows = con.execute("SELECT count(*) FROM read_parquet(%s)" % sql_str(tmp)).fetchone()[0]
     tmp.replace(out)
@@ -153,7 +174,7 @@ LEFT JOIN znacka_aliases z ON z.zapis = v.znacka_zapis
 
 def connect(parquet):
     """DuckDB spojeni s pohledy 'vozidla' (cely snapshot) a 'osobni'."""
-    con = duckdb.connect()
+    con = duckdb_connect()
     con.execute("CREATE TABLE palivo_labels (kod VARCHAR, nazev VARCHAR)")
     con.executemany("INSERT INTO palivo_labels VALUES (?, ?)",
                     list(rules.PALIVO_LABELS.items()))

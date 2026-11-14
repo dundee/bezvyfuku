@@ -1,0 +1,11 @@
+// Cloudflare Workers: jen staticke soubory z `npm run build`, zadny kod na serveru.
+// Builds a deploy dela Cloudflare z GitHubu (Workers Builds), viz README.
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "bezvyfuku",
+	"compatibility_date": "2026-11-14",
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "404-page"
+	}
+}

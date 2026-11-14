@@ -3,6 +3,8 @@
 # Snapshoty RSV (CSV ~17 GB, Parquet ~2.3 GB) do gitu nepatri
 /data/
 *.csv
+# Kam DuckDB odklada data, kdyz mu dojde pamet (pipeline pouziva data/tmp)
+.tmp/
 report_*.xlsx
 !/tests/golden/report_*.xlsx
 
