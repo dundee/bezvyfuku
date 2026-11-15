@@ -1,7 +1,7 @@
 ---
 import PodilBev from '../components/PodilBev.astro';
 import Pohony from '../components/Pohony.astro';
-import Znacky from '../components/Znacky.astro';
+import TopTabulka from '../components/TopTabulka.astro';
 import Zaklad from '../layouts/Zaklad.astro';
 import { celkem, data, posledni } from '../lib/data';
 import { cislo, nazevMesice, podil, velkym, zmena } from '../lib/format';
@@ -69,6 +69,15 @@ const karty = [
 			Registrace elektromobilů podle tovární značky za měsíc, od začátku roku nebo za posledních
 			12 měsíců.
 		</p>
-		<Znacky />
+		<TopTabulka id="znacky" zdroj="bevZnacky" />
+	</section>
+
+	<section>
+		<h2>Elektromobily podle modelů</h2>
+		<p class="popis">
+			Registrace elektromobilů podle obchodního označení z registru za měsíc, od začátku roku
+			nebo za posledních 12 měsíců.
+		</p>
+		<TopTabulka id="modely" zdroj="bevModely" />
 	</section>
 </Zaklad>

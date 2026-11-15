@@ -1,9 +1,10 @@
-// Tabulka BEV podle znacek za zvolene obdobi a srovnani s obdobim o rok driv.
-// Pouziva ji server pro vychozi stav stranky i skript v prohlizeci.
+// Tabulky BEV podle znacek nebo modelu za zvolene obdobi a srovnani s rokem driv.
+// Pouziva je server pro vychozi stav stranky i skript v prohlizeci.
 import { soucet, type Rady } from './data';
 import { nazevMesice } from './format';
 
 export type Obdobi = 'mesic' | 'rok' | '12m';
+export type Zdroj = 'bevZnacky' | 'bevModely';
 
 /** Kolik radku tabulka ukazuje, nez si ctenar rozbali vsechny. */
 export const ZKRACENE = 20;
@@ -28,7 +29,7 @@ export function popisObdobi(obdobi: Obdobi, i: number, mesice: string[]): string
 }
 
 export interface Radek {
-	znacka: string;
+	klic: string;
 	ted: number;
 	loni: number;
 }
@@ -38,17 +39,23 @@ export function tabulka(rady: Rady, obdobi: Obdobi, i: number, mesice: string[])
 	const radky: Radek[] = [];
 	let ted = 0;
 	let loni = 0;
-	for (const [znacka, rada] of Object.entries(rady)) {
-		const r = { znacka, ted: soucet(rada, od, doI), loni: soucet(rada, od - 12, doI - 12) };
+	for (const [klic, rada] of Object.entries(rady)) {
+		const r = { klic, ted: soucet(rada, od, doI), loni: soucet(rada, od - 12, doI - 12) };
 		if (!r.ted && !r.loni) continue;
 		radky.push(r);
 		ted += r.ted;
 		loni += r.loni;
 	}
-	radky.sort((a, b) => b.ted - a.ted || b.loni - a.loni || a.znacka.localeCompare(b.znacka, 'cs'));
+	radky.sort((a, b) => b.ted - a.ted || b.loni - a.loni || a.klic.localeCompare(b.klic, 'cs'));
 	return { radky, ted, loni };
 }
 
-export function nazevZnacky(znacka: string): string {
-	return znacka || '(neuvedeno)';
+export function nazev(s: string): string {
+	return s || '(neuvedeno)';
+}
+
+/** Klic v `bevModely` ma tvar `ZNAČKA|MODEL`. */
+export function rozdelModel(klic: string): [string, string] {
+	const sep = klic.indexOf('|');
+	return sep === -1 ? [klic, ''] : [klic.slice(0, sep), klic.slice(sep + 1)];
 }

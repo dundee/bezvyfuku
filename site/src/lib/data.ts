@@ -12,6 +12,7 @@ export interface Registrace {
 	mesice: string[];
 	pohon: Record<Typ, Rady>;
 	bevZnacky: Record<Typ, Rady>;
+	bevModely: Record<Typ, Rady>;
 	aliasy: Record<string, string>;
 }
 

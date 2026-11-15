@@ -251,7 +251,7 @@ const cesta = Astro.url.pathname;
 		font-weight: 700;
 		border-bottom: 0;
 	}
-	/* 21 = ZKRACENE + 1, viz lib/znacky.ts */
+	/* 21 = ZKRACENE + 1, viz lib/tabulka.ts */
 	.tabulka.zkracena:not(.vse) tbody tr:nth-child(n + 21) {
 		display: none;
 	}
@@ -281,17 +281,20 @@ const cesta = Astro.url.pathname;
 			font-size: 1.6rem;
 		}
 		.tabulka {
-			font-size: 0.9rem;
+			font-size: 0.82rem;
 		}
 		.tabulka th,
 		.tabulka td {
-			padding: 0.4rem 0.3rem;
+			padding: 0.4rem 0.25rem;
 		}
 		.tabulka th {
 			white-space: normal;
 		}
+		.tabulka .zalomit {
+			white-space: normal;
+		}
 		.tabulka .poradi {
-			width: 1.75rem;
+			width: 1.5rem;
 		}
 		.tabulka .podil {
 			display: none;

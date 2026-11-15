@@ -90,8 +90,11 @@ def test_export_totals_match_report(date, month):
     assert totals(data["pohon"]["nove"]) == [fuel_new[-1][1], fuel_new[-1][3]]
     assert totals(data["pohon"]["ojete"]) == [fuel_used[-1][1], fuel_used[-1][3]]
     assert totals(data["bevZnacky"]["nove"]) == [brands[-1][1], brands[-1][2]]
+    assert totals(data["bevModely"]["nove"]) == [brands[-1][1], brands[-1][2]]
     bev = data["pohon"]["nove"][rules.SKUPINA_BEV]
     assert [bev[i], bev[i - 12]] == [brands[-1][1], brands[-1][2]]
+    bev_ojete = data["pohon"]["ojete"][rules.SKUPINA_BEV]
+    assert totals(data["bevModely"]["ojete"]) == [bev_ojete[i], bev_ojete[i - 12]]
 
 
 @pytest.mark.parametrize("kod,skupina", [

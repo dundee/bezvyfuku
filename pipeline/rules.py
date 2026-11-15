@@ -24,8 +24,9 @@ COL_REG_CZ = "Datum 1. registrace v ČR"
 COL_DRUH = "Druh vozidla"
 COL_PALIVO = "Palivo"
 COL_ZNACKA = "Tovární značka"
+COL_MODEL = "Obchodní označení"
 
-REQUIRED_COLUMNS = (COL_REG, COL_REG_CZ, COL_DRUH, COL_PALIVO, COL_ZNACKA)
+REQUIRED_COLUMNS = (COL_REG, COL_REG_CZ, COL_DRUH, COL_PALIVO, COL_ZNACKA, COL_MODEL)
 
 # Pozor: sloupec 'Plne elektricke vozidlo' je v datech nespolehlivy
 # (za srpen 2026 dava 1236 misto 1499), BEV se urcuje podle 'Palivo'.

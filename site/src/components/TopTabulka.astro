@@ -1,0 +1,180 @@
+---
+import { data, posledni } from '../lib/data';
+import { cislo, nazevMesice, podil, zmena } from '../lib/format';
+import { nazev, OBDOBI, popisObdobi, rozdelModel, tabulka, ZKRACENE, type Zdroj } from '../lib/tabulka';
+
+interface Props {
+	id: string;
+	zdroj: Zdroj;
+}
+
+const { id, zdroj } = Astro.props;
+const jeModel = zdroj === 'bevModely';
+const jednotka = jeModel ? 'modelů' : 'značek';
+const vychozi = tabulka(data[zdroj].nove, 'mesic', posledni, data.mesice);
+const mesice = data.mesice
+	.map((m, i) => ({ m, i }))
+	.filter(({ m }) => m >= '2016-01')
+	.reverse();
+---
+
+<div data-top-tabulka={id} data-zdroj={zdroj} data-jednotka={jednotka}>
+	<form class="ovladani" id={`${id}-volby`}>
+		<label>
+			Auta
+			<select name="typ">
+				<option value="nove">nová</option>
+				<option value="ojete">dovezené ojetiny</option>
+			</select>
+		</label>
+		<label>
+			Období
+			<select name="obdobi">
+				{Object.entries(OBDOBI).map(([hodnota, popis]) => <option value={hodnota}>{popis}</option>)}
+			</select>
+		</label>
+		<label>
+			Končí
+			<select name="mesic">
+				{mesice.map(({ m, i }) => <option value={i}>{nazevMesice(m)}</option>)}
+			</select>
+		</label>
+	</form>
+
+	<div class="tabulka-obal">
+		<table class="tabulka zkracena" id={`${id}-tabulka`}>
+			<caption>
+				{popisObdobi('mesic', posledni, data.mesice)}, srovnání se stejným obdobím o rok dříve
+			</caption>
+			<thead>
+				<tr>
+					<th class="poradi">#</th>
+					<th>Značka</th>
+					{jeModel && <th>Model</th>}
+					<th class="cislo">Počet</th>
+					<th class="cislo podil">Podíl</th>
+					<th class="cislo">Před rokem</th>
+					<th class="cislo">Změna</th>
+				</tr>
+			</thead>
+			<tbody>
+				{
+					vychozi.radky.map((r, k) => {
+						const [znacka, model] = jeModel ? rozdelModel(r.klic) : [r.klic, ''];
+						return (
+							<tr>
+								<td class="poradi">{k + 1}</td>
+								<td>{nazev(znacka)}</td>
+								{jeModel && <td class="zalomit">{nazev(model)}</td>}
+								<td class="cislo">{cislo(r.ted)}</td>
+								<td class="cislo podil">{podil(vychozi.ted ? r.ted / vychozi.ted : 0)}</td>
+								<td class="cislo">{cislo(r.loni)}</td>
+								<td class="cislo">{zmena(r.ted, r.loni)}</td>
+							</tr>
+						);
+					})
+				}
+			</tbody>
+			<tfoot>
+				<tr>
+					<td></td>
+					<td>Celkem</td>
+					{jeModel && <td></td>}
+					<td class="cislo">{cislo(vychozi.ted)}</td>
+					<td class="podil"></td>
+					<td class="cislo">{cislo(vychozi.loni)}</td>
+					<td class="cislo">{zmena(vychozi.ted, vychozi.loni)}</td>
+				</tr>
+			</tfoot>
+		</table>
+	</div>
+	<button type="button" class="vice" id={`${id}-vice`} hidden={vychozi.radky.length <= ZKRACENE}>
+		Zobrazit všech {vychozi.radky.length} {jednotka}
+	</button>
+</div>
+
+<script>
+	import { data, type Typ } from '../lib/data';
+	import { cislo, podil, zmena } from '../lib/format';
+	import {
+		nazev,
+		popisObdobi,
+		rozdelModel,
+		tabulka,
+		ZKRACENE,
+		type Obdobi,
+		type Zdroj,
+	} from '../lib/tabulka';
+
+	function bunky(tridy: string[], hodnoty: string[]): HTMLTableRowElement {
+		const tr = document.createElement('tr');
+		hodnoty.forEach((text, k) => {
+			const td = tr.insertCell();
+			td.textContent = text;
+			if (tridy[k]) td.className = tridy[k];
+		});
+		return tr;
+	}
+
+	for (const obal of document.querySelectorAll<HTMLElement>('[data-top-tabulka]')) {
+		const zdroj = obal.dataset.zdroj as Zdroj;
+		const jednotka = obal.dataset.jednotka!;
+		const jeModel = zdroj === 'bevModely';
+		const tridy = jeModel
+			? ['poradi', '', 'zalomit', 'cislo', 'cislo podil', 'cislo', 'cislo']
+			: ['poradi', '', 'cislo', 'cislo podil', 'cislo', 'cislo'];
+
+		const form = obal.querySelector('form') as HTMLFormElement;
+		const table = obal.querySelector('table') as HTMLTableElement;
+		const vice = obal.querySelector('.vice') as HTMLButtonElement;
+
+		function popisTlacitka() {
+			const n = table.tBodies[0].rows.length;
+			vice.hidden = n <= ZKRACENE;
+			vice.textContent = table.classList.contains('vse')
+				? `Zobrazit jen prvních ${ZKRACENE}`
+				: `Zobrazit všech ${n} ${jednotka}`;
+		}
+
+		function vykresli() {
+			const volby = new FormData(form);
+			const typ = volby.get('typ') as Typ;
+			const obdobi = volby.get('obdobi') as Obdobi;
+			const i = Number(volby.get('mesic'));
+			const t = tabulka(data[zdroj][typ], obdobi, i, data.mesice);
+
+			table.caption!.textContent = `${popisObdobi(obdobi, i, data.mesice)}, srovnání se stejným obdobím o rok dříve`;
+			table.tBodies[0].replaceChildren(
+				...t.radky.map((r, k) => {
+					const casti = jeModel
+						? (() => {
+								const [znacka, model] = rozdelModel(r.klic);
+								return [nazev(znacka), nazev(model)];
+							})()
+						: [nazev(r.klic)];
+					return bunky(tridy, [
+						String(k + 1),
+						...casti,
+						cislo(r.ted),
+						podil(t.ted ? r.ted / t.ted : 0),
+						cislo(r.loni),
+						zmena(r.ted, r.loni),
+					]);
+				}),
+			);
+			const paticka = jeModel ? ['', 'Celkem', ''] : ['', 'Celkem'];
+			table.tFoot!.replaceChildren(
+				bunky(tridy, [...paticka, cislo(t.ted), '', cislo(t.loni), zmena(t.ted, t.loni)]),
+			);
+			popisTlacitka();
+		}
+
+		form.addEventListener('change', vykresli);
+		vice.addEventListener('click', () => {
+			table.classList.toggle('vse');
+			popisTlacitka();
+		});
+		// Prohlizec muze po navratu na stranku obnovit vyber ve formulari.
+		vykresli();
+	}
+</script>

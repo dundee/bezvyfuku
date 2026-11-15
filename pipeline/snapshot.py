@@ -146,6 +146,7 @@ def last_month(snapshot_date):
 #   palivo - nazev z PALIVO_LABELS, neznamy kod projde syrovy
 #   skupina - siroka skupina paliva pro grafy (rules.skupina_paliva)
 #   znacka - po strip() a ZNACKA_ALIASES
+#   model  - obchodni oznaceni po strip()
 # Prazdne hodnoty se berou jako '', stejne jako je cetl csv modul.
 OSOBNI_SQL = """
 CREATE VIEW osobni AS
@@ -154,7 +155,8 @@ WITH v AS (
         coalesce({reg}, '') AS datum_reg,
         coalesce({reg_cz}, '') AS datum_reg_cz,
         coalesce({palivo}, '') AS palivo_kod,
-        {znacka_zapis} AS znacka_zapis
+        {znacka_zapis} AS znacka_zapis,
+        {model_zapis} AS model
     FROM vozidla
     WHERE {druh} = {druh_value}
 )
@@ -164,7 +166,8 @@ SELECT
     palivo_kod,
     coalesce(p.nazev, palivo_kod) AS palivo,
     s.skupina,
-    coalesce(z.znacka, znacka_zapis) AS znacka
+    coalesce(z.znacka, znacka_zapis) AS znacka,
+    model
 FROM v
 LEFT JOIN palivo_labels p ON p.kod = v.palivo_kod
 LEFT JOIN palivo_skupiny s ON s.kod = v.palivo_kod
@@ -192,6 +195,7 @@ def connect(parquet):
         reg_cz=ident(rules.COL_REG_CZ),
         palivo=ident(rules.COL_PALIVO),
         znacka_zapis=sql_strip("coalesce(%s, '')" % ident(rules.COL_ZNACKA)),
+        model_zapis=sql_strip("coalesce(%s, '')" % ident(rules.COL_MODEL)),
         druh=ident(rules.COL_DRUH),
         druh_value=sql_str(rules.DRUH_VOZIDLA),
     ))

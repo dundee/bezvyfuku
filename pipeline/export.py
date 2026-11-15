@@ -33,16 +33,26 @@ def series(con, column, months, nove, bev_only=False, keys=None):
     Druhou hodnotou je pocet vozidel, jejichz mesic neni platny RRRR-MM
     (vadne datum v registru), ty v radach nejsou.
     """
-    assert column in ("skupina", "znacka")
-    sql = ("SELECT %s, mesic, count(*) FROM osobni "
-           "WHERE nove = ? AND mesic >= ? AND mesic <= ?" % column)
+    assert column in ("skupina", "znacka", "znacka_model")
+    if column == "znacka_model":
+        sql = ("SELECT znacka, model, mesic, count(*) FROM osobni "
+               "WHERE nove = ? AND mesic >= ? AND mesic <= ?")
+    else:
+        sql = ("SELECT %s, mesic, count(*) FROM osobni "
+               "WHERE nove = ? AND mesic >= ? AND mesic <= ?" % column)
     params = [nove, months[0], months[-1]]
     if bev_only:
         sql += " AND palivo_kod = ?"
         params.append(rules.PALIVO_BEV)
     index = {m: i for i, m in enumerate(months)}
     out, invalid = {}, 0
-    for key, mesic, n in con.execute(sql + " GROUP BY ALL", params).fetchall():
+    for row in con.execute(sql + " GROUP BY ALL", params).fetchall():
+        if column == "znacka_model":
+            znacka, model, mesic, n = row
+            assert "|" not in znacka, "neocekavane '|' ve znacce: %r" % znacka
+            key = "%s|%s" % (znacka, model)
+        else:
+            key, mesic, n = row
         i = index.get(mesic)
         if i is None:
             invalid += n
@@ -65,6 +75,7 @@ def build(con, snapshot_date):
         "mesice": months,
         "pohon": {},
         "bevZnacky": {},
+        "bevModely": {},
         "aliasy": rules.ZNACKA_ALIASES,
     }
     invalid = 0
@@ -72,6 +83,7 @@ def build(con, snapshot_date):
         data["pohon"][typ], n = series(con, "skupina", months, nove, keys=rules.PALIVO_SKUPINY)
         invalid += n
         data["bevZnacky"][typ], _ = series(con, "znacka", months, nove, bev_only=True)
+        data["bevModely"][typ], _ = series(con, "znacka_model", months, nove, bev_only=True)
     return data, invalid
 
 
@@ -93,9 +105,10 @@ def run(parquet, out=OUT):
     months = data["mesice"]
     print("Snapshot: %s" % parquet)
     print("Mesice  : %s .. %s (%d)" % (months[0], months[-1], len(months)))
-    print("Rady    : %d skupin paliv, %d znacek BEV novych, %d ojetin"
+    print("Rady    : %d skupin paliv, %d znacek BEV novych, %d ojetin, %d modelu novych, %d ojetin"
           % (len(rules.PALIVO_SKUPINY), len(data["bevZnacky"]["nove"]),
-             len(data["bevZnacky"]["ojete"])))
+             len(data["bevZnacky"]["ojete"]), len(data["bevModely"]["nove"]),
+             len(data["bevModely"]["ojete"])))
     if invalid:
         print("  POZOR: %d vozidel ma v obdobi neplatny mesic registrace, v radach nejsou"
               % invalid)
