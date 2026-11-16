@@ -251,6 +251,30 @@ const cesta = Astro.url.pathname;
 		font-weight: 700;
 		border-bottom: 0;
 	}
+	.zmena-bunka {
+		display: inline-flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.3rem;
+	}
+	.ikona {
+		display: inline-flex;
+		flex-shrink: 0;
+	}
+	.ikona svg {
+		width: 0.9rem;
+		height: 0.9rem;
+	}
+	.ikona-nove,
+	.ikona-rust {
+		color: var(--bev);
+	}
+	.ikona-stejne {
+		color: var(--svetle);
+	}
+	.ikona-pokles {
+		color: #b91c1c;
+	}
 	/* 21 = ZKRACENE + 1, viz lib/tabulka.ts */
 	.tabulka.zkracena:not(.vse) tbody tr:nth-child(n + 21) {
 		display: none;
@@ -281,11 +305,18 @@ const cesta = Astro.url.pathname;
 			font-size: 1.6rem;
 		}
 		.tabulka {
-			font-size: 0.82rem;
+			font-size: 0.8rem;
 		}
 		.tabulka th,
 		.tabulka td {
-			padding: 0.4rem 0.25rem;
+			padding: 0.4rem 0.2rem;
+		}
+		.zmena-bunka {
+			gap: 0.2rem;
+		}
+		.ikona svg {
+			width: 0.8rem;
+			height: 0.8rem;
 		}
 		.tabulka th {
 			white-space: normal;

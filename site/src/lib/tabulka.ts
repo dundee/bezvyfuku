@@ -59,3 +59,38 @@ export function rozdelModel(klic: string): [string, string] {
 	const sep = klic.indexOf('|');
 	return sep === -1 ? [klic, ''] : [klic.slice(0, sep), klic.slice(sep + 1)];
 }
+
+export interface IkonaZmeny {
+	trida: 'nove' | 'rust' | 'stejne' | 'pokles';
+	popis: string;
+	d: string;
+	plna?: boolean;
+}
+
+/** Piktogram zmeny podle cisteho mezirocniho pomeru (shodne se zaokrouhlenym %). */
+export function ikonaZmeny(ted: number, loni: number): IkonaZmeny | null {
+	if (!loni) {
+		return ted > 0
+			? {
+					trida: 'nove',
+					popis: 'Nové oproti loňsku',
+					d: 'M8 1.5L9.7 6.3 14.5 8 9.7 9.7 8 14.5 6.3 9.7 1.5 8 6.3 6.3Z',
+					plna: true,
+				}
+			: null;
+	}
+	const pct = Math.round((ted / loni - 1) * 100);
+	if (pct >= 100) {
+		return { trida: 'rust', popis: 'Růst o 100 % a více', d: 'M8 13V3M4 7l4-4 4 4' };
+	}
+	if (pct >= 10) {
+		return { trida: 'rust', popis: 'Růst o 10–99 %', d: 'M4 12L12 4M6 4h6v6' };
+	}
+	if (pct > -10) {
+		return { trida: 'stejne', popis: 'Změna do ±9 %', d: 'M3 8h10M9 4l4 4-4 4' };
+	}
+	if (pct > -50) {
+		return { trida: 'pokles', popis: 'Pokles o 10–49 %', d: 'M4 4l8 8M12 6v6H6' };
+	}
+	return { trida: 'pokles', popis: 'Pokles o 50 % a více', d: 'M8 3v10M4 9l4 4 4-4' };
+}
